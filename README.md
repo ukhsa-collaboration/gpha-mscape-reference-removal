@@ -36,7 +36,7 @@ Both modes accept either **paired-end (short-read)** or **single-end (long-read)
  
 **Remove a reference from some samples:**
 ```bash
-nextflow run nfellaby/reference-removal -profile docker \
+nextflow run gpha-mscape-reference-removal/reference-removal -profile docker \
   --validation false \
   --fasta reference.fna \
   --samplesheet samples.csv \
@@ -45,7 +45,7 @@ nextflow run nfellaby/reference-removal -profile docker \
  
 **Validate how well a reference depletes:**
 ```bash
-nextflow run nfellaby/reference-removal -profile docker \
+nextflow run gpha-mscape-reference-removal/reference-removal -profile docker \
   --validation true \
   --fasta reference.fna \
   --read_type both \
