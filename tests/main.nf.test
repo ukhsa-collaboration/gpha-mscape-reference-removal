@@ -1,0 +1,85 @@
+nextflow_pipeline {
+
+    name "Test pipeline parameter validation (main.nf)"
+    script "main.nf"
+    tag "pipeline"
+
+    // These tests use -stub-run where possible; they exist to catch
+    // exactly the class of regression seen repeatedly during development --
+    // an error-checking branch in main.nf silently drifting out of sync
+    // with what the workflows underneath actually require (e.g. requiring
+    // --fasta unconditionally even when --idx alone should be enough for
+    // plain removal, or a stale param name breaking a --sample_data_dir run).
+
+    test("validation requires --fasta") {
+        when {
+            params {
+                validation = true
+                idx = "${projectDir}/tests/test-data/tiny_ref.fasta"  // wrong type deliberately irrelevant here
+                samplesheet = "dummy.csv"
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.stdout.toString().contains("Validation requires --fasta")
+        }
+    }
+
+    test("removal requires exactly one of --fasta or --idx (fails when both given)") {
+        when {
+            params {
+                validation = false
+                fasta = "${projectDir}/tests/test-data/tiny_ref.fasta"
+                idx = "${projectDir}/tests/test-data/tiny_ref.fasta"
+                samplesheet = "dummy.csv"
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.stdout.toString().contains("exactly one of --fasta or --idx")
+        }
+    }
+
+    test("removal requires exactly one of --fasta or --idx (fails when neither given)") {
+        when {
+            params {
+                validation = false
+                samplesheet = "dummy.csv"
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.stdout.toString().contains("exactly one of --fasta or --idx")
+        }
+    }
+
+    test("requires exactly one of --samplesheet or --sample_data_dir") {
+        when {
+            params {
+                validation = false
+                fasta = "${projectDir}/tests/test-data/tiny_ref.fasta"
+                samplesheet = "dummy.csv"
+                sample_data_dir = "${projectDir}/tests/test-data"
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.stdout.toString().contains("exactly one of --samplesheet or --sample_data_dir")
+        }
+    }
+
+    test("invalid --read_type is rejected") {
+        when {
+            params {
+                validation = true
+                fasta = "${projectDir}/tests/test-data/tiny_ref.fasta"
+                samplesheet = "dummy.csv"
+                read_type = "long"  // stale vocabulary -- should be rejected
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.stdout.toString().contains("--read_type must be one of")
+        }
+    }
+}

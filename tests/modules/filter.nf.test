@@ -1,0 +1,90 @@
+nextflow_process {
+
+    name "Test process SINGLE_REFERENCE_REMOVAL"
+    script "modules/filter.nf"
+    process "SINGLE_REFERENCE_REMOVAL"
+    tag "modules"
+
+    setup {
+        run("GENERATE_IDX") {
+            script "modules/generate_idx.nf"
+            process {
+                """
+                input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                input[1] = "tiny_ref"
+                """
+            }
+        }
+    }
+
+    test("depletes reference reads and publishes both fastq and json") {
+        when {
+            process {
+                """
+                input[0] = tuple("sample1", file("${projectDir}/tests/test-data/tiny_single.fastq.gz"))
+                input[1] = GENERATE_IDX.out.ref_idx
+                input[2] = "removal"
+                """
+            }
+        }
+        then {
+            assert process.success
+
+            // Regression guard: the declared `output:` filenames must match
+            // exactly what the `deacon filter -s/-o` flags actually write --
+            // several earlier versions of this process had these silently
+            // mismatched (e.g. declaring *.sample_summary.json while the
+            // script wrote *.ref_removed.json), which fails at runtime with
+            // "Missing output file(s)" rather than at review time.
+            def (sample_id, json, fastq) = process.out.single_depleted[0]
+            assert sample_id == "sample1"
+            assert file(json).name == "sample1.sample_summary.json"
+            assert file(fastq).name == "sample1.sample_reads.fq.gz"
+            assert file(json).exists()
+            assert file(fastq).exists()
+        }
+    }
+}
+
+nextflow_process {
+
+    name "Test process PAIRED_REFERENCE_REMOVAL"
+    script "modules/filter.nf"
+    process "PAIRED_REFERENCE_REMOVAL"
+    tag "modules"
+
+    setup {
+        run("GENERATE_IDX") {
+            script "modules/generate_idx.nf"
+            process {
+                """
+                input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                input[1] = "tiny_ref"
+                """
+            }
+        }
+    }
+
+    test("depletes paired reference reads, both R1 and R2 published") {
+        when {
+            process {
+                """
+                input[0] = tuple(
+                    "sample1",
+                    file("${projectDir}/tests/test-data/tiny_r1.fastq.gz"),
+                    file("${projectDir}/tests/test-data/tiny_r2.fastq.gz"),
+                )
+                input[1] = GENERATE_IDX.out.ref_idx
+                input[2] = "removal"
+                """
+            }
+        }
+        then {
+            assert process.success
+            def (sample_id, json, r1, r2) = process.out.paired_depleted[0]
+            assert file(json).name == "sample1.sample_summary.json"
+            assert file(r1).name == "sample1.sample_reads.R1.fq.gz"
+            assert file(r2).name == "sample1.sample_reads.R2.fq.gz"
+        }
+    }
+}

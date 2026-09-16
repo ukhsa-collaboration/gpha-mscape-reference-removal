@@ -1,0 +1,74 @@
+nextflow_workflow {
+
+    name "Test workflow SAMPLES_SETUP"
+    script "subworkflow/samples_parsing.nf"
+    workflow "SAMPLES_SETUP"
+    tag "subworkflow"
+
+    test("directory input: correctly branches single vs paired by file count") {
+        when {
+            workflow {
+                """
+                input[0] = null
+                input[1] = "${projectDir}/tests/test-data"
+                input[2] = "both"
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            // tiny_single.fastq.gz -> one sample, single-end
+            // tiny_r1/tiny_r2.fastq.gz share a stripped sample_id -> paired
+            def single_ids = workflow.out.single_end.collect { it[0] }
+            def paired_ids = workflow.out.paired_end.collect { it[0] }
+            assert single_ids.contains("tiny_single")
+            assert paired_ids.contains("tiny")
+        }
+    }
+
+    test("samplesheet input: single vs paired determined by presence of a third column") {
+        setup {
+            new File("${launchDir}/tmp_samplesheet.csv").text = """\
+                sample_id,read1,read2
+                s1,${projectDir}/tests/test-data/tiny_single.fastq.gz,
+                s2,${projectDir}/tests/test-data/tiny_r1.fastq.gz,${projectDir}/tests/test-data/tiny_r2.fastq.gz
+                """.stripIndent()
+        }
+        when {
+            workflow {
+                """
+                input[0] = file("${launchDir}/tmp_samplesheet.csv")
+                input[1] = null
+                input[2] = "both"
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.out.single_end.collect { it[0] }.contains("s1")
+            assert workflow.out.paired_end.collect { it[0] }.contains("s2")
+        }
+    }
+
+    test("malformed samplesheet row errors with a clear message") {
+        setup {
+            new File("${launchDir}/tmp_bad_samplesheet.csv").text = """\
+                sample_id
+                s1
+                """.stripIndent()
+        }
+        when {
+            workflow {
+                """
+                input[0] = file("${launchDir}/tmp_bad_samplesheet.csv")
+                input[1] = null
+                input[2] = "both"
+                """
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.stdout.toString().contains("Malformed row")
+        }
+    }
+}
