@@ -14,7 +14,7 @@ process SINGLE_SYNTH_READS {
 
     container 'community.wave.seqera.io/library/pbsim3:3.0.5--86541aa3eccd4c3c'
     label 'process_low'
-    maxForks 10
+    maxRetries 3
 
     input:
     path(fasta_fp)
@@ -56,18 +56,18 @@ process PAIRED_SYNTH_READS {
 
     container 'community.wave.seqera.io/library/dwgsim:1.1.14--b4033839f1e4b148'
     label 'process_low'
-    maxForks 10
+    maxRetries 3
 
     input:
     path(fasta_fp)
     val(sample_id)
 
     output:
-    tuple path("${sample_id}.bwa.R1.fastq.gz"), path("${sample_id}.bwa.R2.fastq.gz"), emit: ref_paired_synth
+    tuple path("${sample_id}.bwa.read1.fastq.gz"), path("${sample_id}.bwa.read2.fastq.gz"), emit: ref_paired_synth
 
     script:
     """
-        dwgsim \
+    dwgsim \
         -C 10 \
         -1 150 \
         -2 150 \

@@ -16,6 +16,11 @@ process SINGLE_REFERENCE_REMOVAL {
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
     label 'process_medium'
     maxForks 10
+    tag "${sample_id}"
+    maxRetries 3
+    // Sample sequence with references removed -- both the fastq and its
+    // json summary are wanted, so no pattern restriction is needed.
+    publishDir "${params.outdir}/data/${sample_id}_single_reads", mode: params.publish_dir_mode
 
     input:
     tuple val(sample_id), path(fastq_fp)
@@ -54,6 +59,12 @@ process SINGLE_SAMPLE_REMOVAL {
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
     label 'process_medium'
     maxForks 10
+    tag "${sample_id}"
+    maxRetries 3
+    // Removed-reference sequences -- only the fastq is wanted here, not
+    // its json summary, so restrict publishing to that one file. (just an inverse of the reference removal json)
+    publishDir "${params.outdir}/data/${sample_id}_single_reads", mode: params.publish_dir_mode,
+        pattern: "*.reference_reads.fq.gz"
 
     input:
     tuple val(sample_id), path(fastq_fp)
@@ -93,6 +104,9 @@ process PAIRED_REFERENCE_REMOVAL {
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
     label 'process_medium'
     maxForks 10
+    tag "${sample_id}"
+    maxRetries 3
+    publishDir "${params.outdir}/data/${sample_id}_paired_reads", mode: params.publish_dir_mode
 
     input:
     tuple val(sample_id), path(fastq_r1_fp), path(fastq_r2_fp)
@@ -111,7 +125,7 @@ process PAIRED_REFERENCE_REMOVAL {
         ${fastq_r2_fp} \
         -s ${sample_id}.sample_summary.json \
         -o ${sample_id}.sample_reads.R1.fq.gz \
-        -o ${sample_id}.sample_reads.R2.fq.gz \
+        -O ${sample_id}.sample_reads.R2.fq.gz \
         -t ${task.cpus}
     """
 }
@@ -129,10 +143,14 @@ process PAIRED_SAMPLE_REMOVAL {
             - FASTQ file
 
     */
-
+    
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
     label 'process_medium'
     maxForks 10
+    tag "${sample_id}"
+    maxRetries 3
+    publishDir "${params.outdir}/data/${sample_id}_paired_reads", mode: params.publish_dir_mode,
+        pattern: "*.reference_reads.R{1,2}.fq.gz"
 
     input:
     tuple val(sample_id), path(fastq_r1_fp), path(fastq_r2_fp)
@@ -150,7 +168,7 @@ process PAIRED_SAMPLE_REMOVAL {
         ${fastq_r2_fp} \
         -s ${sample_id}.reference_summary.json \
         -o ${sample_id}.reference_reads.R1.fq.gz \
-        -o ${sample_id}.reference_reads.R2.fq.gz \
+        -O ${sample_id}.reference_reads.R2.fq.gz \
         -t ${task.cpus}
     """
 }

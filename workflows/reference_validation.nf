@@ -2,7 +2,7 @@
 include { REFERENCE_PARSING } from '../subworkflow/reference_parsing'
 include { SAMPLES_SETUP     } from '../subworkflow/samples_parsing'
 include { FILTER_READS      } from '../subworkflow/filter_reads'
-include { VALIDATION_REPORT } from '../subworkflow/report'
+include { VALIDATION_REPORT as VALIDATION_REPORT_SINGLE; VALIDATION_REPORT as VALIDATION_REPORT_PAIRED } from '../subworkflow/report'
 
 def checkBackgroundPresent(ch, String label, boolean required) {
     ch.count().subscribe { n ->
@@ -21,6 +21,8 @@ def checkBackgroundPresent(ch, String label, boolean required) {
 process SPIKE_SINGLE_READS {
     label 'process_low'
     tag "${sample_id}"
+    container 'community.wave.seqera.io/library/pyfastx_pandas_pip_plotly:ce47640d3d5148f3'
+    maxRetries 3
 
     input:
     tuple val(sample_id), path(background_fq)
@@ -38,7 +40,9 @@ process SPIKE_SINGLE_READS {
 process SPIKE_PAIRED_READS {
     label 'process_low'
     tag "${sample_id}"
-
+    container 'community.wave.seqera.io/library/pyfastx_pandas_pip_plotly:ce47640d3d5148f3'
+    maxRetries 3
+    
     input:
     tuple val(sample_id), path(background_reads)
     tuple path(ref_r1), path(ref_r2)
@@ -66,14 +70,14 @@ workflow REFERENCE_VALIDATION{
     def paired_reads = ['paired', 'both']
     def strict_both = !(params.allow_partial_validation ?: false)
 
-    // Generate index files for reference
-    REFERENCE_PARSING(fasta, read_type)
+    // Either use existing index file or generate new one from fasta
+    REFERENCE_PARSING(fasta, idx, read_type)
     // Set up background data
     SAMPLES_SETUP(background_samplesheet_fp, background_data_dir, read_type)
 
     
-    def spiked_long_ch  = Channel.empty()
-    def spiked_short_ch = Channel.empty()
+    def spiked_single_ch  = Channel.empty()
+    def spiked_paired_ch = Channel.empty()
 
     // Spike in syntheised reference reads into test sample(s)
     if (read_type in paired_reads) {
@@ -92,14 +96,14 @@ workflow REFERENCE_VALIDATION{
         spiked_single_ch = SPIKE_SINGLE_READS.out.spiked
     }
 
-    // Run Reference Removal on Spiked samples
+    // // Run Reference Removal on Spiked samples
     FILTER_READS(spiked_single_ch, spiked_paired_ch, REFERENCE_PARSING.out.ref_idx)
    
     // --- Reporting: one VALIDATION_REPORT call per read type, since the ---
     // --- underlying (background_truth, isolate_out, depleted_out) shapes  ---
     // --- differ between long (single fastq) and paired (R1+R2 pair)        ---
     if (read_type in single_reads) {
-        VALIDATION_REPORT(
+        VALIDATION_REPORT_SINGLE(
             SAMPLES_SETUP.out.single_end,           // background_truth, pre-spike
             REFERENCE_PARSING.out.ref_single_synth.first(),
             FILTER_READS.out.single_ref_only,
@@ -109,7 +113,7 @@ workflow REFERENCE_VALIDATION{
     }
 
     if (read_type in paired_reads) {
-        VALIDATION_REPORT(
+        VALIDATION_REPORT_PAIRED(
             SAMPLES_SETUP.out.paired_end,
             REFERENCE_PARSING.out.ref_paired_synth.first(),
             FILTER_READS.out.paired_ref_only,

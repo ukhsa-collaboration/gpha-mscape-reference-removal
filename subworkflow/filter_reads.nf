@@ -1,8 +1,7 @@
-// subworkflow/filter_reads.nf
 #!/usr/bin/env nextflow
 
 include { SINGLE_REFERENCE_REMOVAL; SINGLE_SAMPLE_REMOVAL     } from '../modules/filter'
-include { PAIRED_REFERENCE_REMOVAL; PAIRED_SAMPLE_REMOVAL } from '../modules/filter'
+include { PAIRED_REFERENCE_REMOVAL; PAIRED_SAMPLE_REMOVAL     } from '../modules/filter'
 
 workflow FILTER_READS {
     take:
@@ -11,10 +10,8 @@ workflow FILTER_READS {
     ref_idx       // single path, from REFERENCE_PARSING.out.ref_idx
 
     main:
-    // .first() — same fix as the AIBLAST queue-vs-value issue: broadcasts
     // the one reference index to every sample rather than being consumed once
     def idx_ch = ref_idx.first()
-
     SINGLE_REFERENCE_REMOVAL(spiked_single, idx_ch)
     SINGLE_SAMPLE_REMOVAL(spiked_single, idx_ch)
     PAIRED_REFERENCE_REMOVAL(spiked_paired, idx_ch)

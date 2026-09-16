@@ -3,6 +3,7 @@ process GENERATE_VALIDATION_REPORT {
     container 'community.wave.seqera.io/library/pyfastx_pandas_pip_plotly:ce47640d3d5148f3'
     label 'process_low'
     tag "${sample_id}"
+    maxRetries 3
 
     input:
     tuple val(sample_id), val(read_type), path(reference_fastq), path(background_fastq),
@@ -26,8 +27,9 @@ process GENERATE_VALIDATION_REPORT {
 }
 
 process AGGREGATE_REPORT {
-    container 'community.wave.seqera.io/library/pyfastx_pandas_pip_plotly:ce47640d3d5148f3'
+    container 'community.wave.seqera.io/library/pip_matplotlib_pandas_plotly_reportlab:f92e133c1334159f'
     label 'process_low'
+    maxRetries 3
     publishDir "${params.outdir}/report", mode: params.publish_dir_mode
 
     input:

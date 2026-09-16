@@ -12,10 +12,10 @@ workflow VALIDATION_REPORT {
 
     main:
 
-    def bg_norm  = background_truth.map { row -> tuple(row[0], row[1..-1]..flatten()) }
+    def bg_norm  = background_truth.map { row -> tuple(row[0], row[1..-1].flatten()) }
     def iso_norm = isolate_out.map      { row -> tuple(row[0], row[1], row[2..-1]) }
-    def dep_nrom = depleted_out.map     { row -> tuple(row[0], row[1], row[2..-1]) }
-    def ref_norm = reference_truth.map  { it instanceof List ? it : [it] }
+    def dep_norm = depleted_out.map     { row -> tuple(row[0], row[1], row[2..-1]) }
+    def ref_norm = reference_truth.map { ref -> [ref instanceof List ? ref : [ref]] }
 
     def joined = bg_norm
         .join(iso_norm)

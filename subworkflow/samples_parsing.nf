@@ -1,7 +1,4 @@
 #!/usr/bin/env nextflow
-include { LONG_SYNTH_READS; SHORT_SYNTH_READS } from '../modules/synthesise_reads'
-include { POOL_LONG_READS; POOL_SHORT_READS }   from '../modules/pool_reads'
-
 workflow SAMPLES_SETUP{
     take:
     samplesheet_fp
@@ -58,11 +55,13 @@ workflow SAMPLES_SETUP{
     } else if(background_data_dir){
         log.info "Specified test data directory ${background_data_dir}. Auto-discovering background FASTQ samples."
         // Generate a channel for each of the FASTQ files in the directory
+        log.info "Specified test data directory ${background_data_dir}. Auto-discovering background FASTQ samples."
+
         def grouped_ch = Channel
-            .fromPath("${background_data_dir}/**/*.{fastq,fq,fastq.gz,fq.gz}")
+            .fromPath("${background_data_dir}/**.{fastq,fq,fastq.gz,fq.gz}")
             .map { fq ->
                 // Strip common mate-pair suffixes to get a sample-level grouping key
-                def sample_id = fq.getName().replaceAll(/(_R?[12])?\.(fastq|fq)(\.gz)?$/, '')
+                def sample_id = fq.getName().replaceAll(/(?i)(?:[._-](?:read)?r?[12](?:_001)?)?\.(fastq|fq)(\.gz)?$/, '')
                 tuple(sample_id, fq)
             }
         .groupTuple()
@@ -80,5 +79,5 @@ workflow SAMPLES_SETUP{
     }
     emit:
     single_end          = single_end_ch
-    paired_end           = paired_end_ch
+    paired_end          = paired_end_ch
 }

@@ -1,30 +1,33 @@
 #!/usr/bin/env nextflow
-
-include { GENERATE_IDX     } from '../modules/generate_idx'
-include { SINGLE_SYNTH_READS } from '../modules/synthesise_reads'
-include { PAIRED_SYNTH_READS } from '../modules/synthesise_reads'
-
+include { GENERATE_IDX                           } from '../modules/generate_idx'
+include { SINGLE_SYNTH_READS; PAIRED_SYNTH_READS } from '../modules/synthesise_reads'
 
 workflow REFERENCE_PARSING{
     take:
-    fasta_fp
+    fasta_fp   // always required for validation -- needed to synthesise reference reads
+    idx_fp     // optional for validation -- used directly, skips re-indexing
     read_type
 
     main:
-    // Check if reference is index file or fasta
-    if (fasta_fp.endsWith('.fasta') || fasta_fp.endsWith('.fa') || fasta_fp.endsWith('.fna')) {
-        log.info "Generating Deacon index file"
-        ref_id = file(fasta_fp).baseName
-        log.info "Reference ID: ${ref_id}"
-        // Create index
+    // fasta_fp is always required (needed to synthesise reference reads
+    // regardless of idx_fp), so ref_id is always derived from it.
+    ref_id = file(fasta_fp).baseName
+    log.info "Reference ID: ${ref_id}"
+
+    // idx_fp is optional -- use it directly if supplied, to skip re-indexing
+    if (idx_fp) {
+        log.info "Using supplied Deacon index directly: ${idx_fp}"
+        ref_idx = Channel.fromPath(idx_fp)
+    } else {
+        log.info "Generating Deacon index file from FASTA: ${fasta_fp}"
         GENERATE_IDX(fasta_fp, ref_id)
         ref_idx = GENERATE_IDX.out.ref_idx
-        
+
         ref_idx.subscribe { idx ->
             idx_simp = file(idx).baseName
             log.info "Generated Deacon index file: ${idx_simp}"
         }
-    } 
+    }
 
     def single_reads = ['single', 'both']
     def paired_reads = ['paired', 'both']
@@ -49,8 +52,6 @@ workflow REFERENCE_PARSING{
         }
     }
     
-    
-
     emit:
     ref_id
     ref_idx
