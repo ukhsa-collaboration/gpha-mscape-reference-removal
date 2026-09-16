@@ -1,0 +1,59 @@
+nextflow_workflow {
+
+    name "Test workflow REFERENCE_PARSING"
+    script "subworkflow/reference_parsing.nf"
+    workflow "REFERENCE_PARSING"
+    tag "subworkflow"
+
+    test("fasta only: generates an index from the fasta") {
+        when {
+            workflow {
+                """
+                input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                input[1] = null
+                input[2] = "single"
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.out.ref_idx.size() == 1
+            // GENERATE_IDX must have actually run in this case
+            assert workflow.trace.tasks().find { it.process == "GENERATE_IDX" } != null
+        }
+    }
+
+    test("fasta + idx: uses the supplied idx directly, does not regenerate it") {
+        given {
+            // Build a real idx once, outside the workflow under test, to
+            // hand in as the "prebuilt" index for this scenario.
+            run("GENERATE_IDX", alias: "PREBUILD") {
+                script "modules/generate_idx.nf"
+                process {
+                    """
+                    input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                    input[1] = "prebuilt"
+                    """
+                }
+            }
+        }
+        when {
+            workflow {
+                """
+                input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                input[1] = PREBUILD.out.ref_idx.first()
+                input[2] = "single"
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            // Regression guard: this is the exact bug found where idx_fp
+            // was accepted as a parameter but never actually read --
+            // GENERATE_IDX ran unconditionally regardless. Asserting it
+            // did NOT run here is the check that would have caught it.
+            assert workflow.trace.tasks().find { it.process == "GENERATE_IDX" } == null
+            assert workflow.out.ref_idx.size() == 1
+        }
+    }
+}

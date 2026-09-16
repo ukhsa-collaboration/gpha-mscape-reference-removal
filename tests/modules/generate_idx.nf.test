@@ -1,0 +1,27 @@
+nextflow_process {
+
+    name "Test process GENERATE_IDX"
+    script "modules/generate_idx.nf"
+    process "GENERATE_IDX"
+    tag "modules"
+
+    test("builds a deacon index from a fasta") {
+        when {
+            process {
+                """
+                input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                input[1] = "tiny_ref"
+                """
+            }
+        }
+        then {
+            assert process.success
+            assert process.out.ref_idx.size() == 1
+            // Regression guard: GENERATE_IDX's declared output filename
+            // must actually match what `deacon index build` writes --
+            // this is the exact class of bug repeatedly found in
+            // filter.nf during development.
+            assert file(process.out.ref_idx[0]).name == "tiny_ref.deacon.idx"
+        }
+    }
+}

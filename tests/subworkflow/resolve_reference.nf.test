@@ -1,0 +1,63 @@
+nextflow_workflow {
+
+    name "Test workflow RESOLVE_REFERENCE"
+    script "subworkflow/resolve_reference.nf"
+    workflow "RESOLVE_REFERENCE"
+    tag "subworkflow"
+
+    test("fasta only: generates an index") {
+        when {
+            workflow {
+                """
+                input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                input[1] = null
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.tasks().find { it.process == "GENERATE_IDX" } != null
+        }
+    }
+
+    test("fasta + idx: idx is used preferentially, no re-indexing") {
+        given {
+            run("GENERATE_IDX", alias: "PREBUILD") {
+                script "modules/generate_idx.nf"
+                process {
+                    """
+                    input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                    input[1] = "prebuilt"
+                    """
+                }
+            }
+        }
+        when {
+            workflow {
+                """
+                input[0] = file("${projectDir}/tests/test-data/tiny_ref.fasta")
+                input[1] = PREBUILD.out.ref_idx.first()
+                """
+            }
+        }
+        then {
+            assert workflow.success
+            assert workflow.trace.tasks().find { it.process == "GENERATE_IDX" } == null
+        }
+    }
+
+    test("neither fasta nor idx: errors clearly rather than proceeding") {
+        when {
+            workflow {
+                """
+                input[0] = null
+                input[1] = null
+                """
+            }
+        }
+        then {
+            assert workflow.failed
+            assert workflow.stdout.toString().contains("Please supply either --fasta")
+        }
+    }
+}

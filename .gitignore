@@ -1,0 +1,6 @@
+.nextflow*
+*.vscode
+*.swp
+*.log
+*.tmp
+.nf-test
