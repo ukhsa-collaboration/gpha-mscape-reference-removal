@@ -14,7 +14,7 @@ process SINGLE_REFERENCE_REMOVAL {
     */
 
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
-    label 'process_medium'
+    label 'process_high_memory'
     maxForks 10
     tag "${sample_id}"
     maxRetries 3
