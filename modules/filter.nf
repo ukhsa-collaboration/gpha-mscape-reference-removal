@@ -14,7 +14,7 @@ process SINGLE_REFERENCE_REMOVAL {
     */
 
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
-    label 'process_medium'
+    label 'process_low'
     maxForks 10
     tag "${sample_id}"
     maxRetries 3
@@ -57,7 +57,7 @@ process SINGLE_SAMPLE_REMOVAL {
     */
 
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
-    label 'process_medium'
+    label 'process_low'
     maxForks 10
     tag "${sample_id}"
     maxRetries 3
@@ -102,7 +102,7 @@ process PAIRED_REFERENCE_REMOVAL {
     */
 
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
-    label 'process_medium'
+    label 'process_low'
     maxForks 10
     tag "${sample_id}"
     maxRetries 3
@@ -145,7 +145,7 @@ process PAIRED_SAMPLE_REMOVAL {
     */
     
     container 'community.wave.seqera.io/library/deacon:0.17.0--43cd5289edd1686c'
-    label 'process_medium'
+    label 'process_low'
     maxForks 10
     tag "${sample_id}"
     maxRetries 3
